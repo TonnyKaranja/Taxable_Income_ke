@@ -1,0 +1,29 @@
+
+import streamlit as st
+import pandas as pd
+
+st.set_page_config(page_title="Vspa Booking & Service Dashboard", layout="wide")
+
+st.title("💆‍♀️ Vspa Service Summary Dashboard")
+st.write("Monitor daily services, payments, and staff performance at a glance.")
+
+# Sample data
+data = {
+    "Date": ["2025-11-06", "2025-11-06", "2025-11-06"],
+    "Client": ["Jane Doe", "Mary W.", "Lucy K."],
+    "Service": ["Waxing", "Facial", "Massage"],
+    "Staff": ["Nancy", "Cynthia", "Lydia"],
+    "Amount (KES)": [2500, 3000, 4000],
+    "Payment Method": ["M-Pesa", "Cash", "Card"]
+}
+
+df = pd.DataFrame(data)
+
+# Dashboard content
+st.subheader("📊 Service Summary")
+st.dataframe(df)
+
+st.metric("Total Services", len(df))
+st.metric("Total Revenue (KES)", df["Amount (KES)"].sum())
+
+st.bar_chart(df.groupby("Staff")["Amount (KES)"].sum())

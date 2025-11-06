@@ -1,61 +1,77 @@
 
 import streamlit as st
 import pandas as pd
+from datetime import date, datetime
 import matplotlib.pyplot as plt
+import os
 
-# Dashboard title
-st.title("💆‍♀️ Vspa Service & Payment Dashboard")
-st.markdown("Welcome to the Vspa digital service and payment management system mock-up.")
+st.set_page_config(page_title="Vspa Management Dashboard", layout="wide")
 
-# Sidebar filters
-st.sidebar.header("Filter Services")
-service_type = st.sidebar.selectbox("Service Type", ["All", "Massage", "Waxing", "Facial", "Nails"])
-payment_status = st.sidebar.selectbox("Payment Status", ["All", "Paid", "Pending", "Cancelled"])
-staff_name = st.sidebar.selectbox("Staff", ["All", "Mary", "Lydia", "Faith", "Joan"])
+# ========= HEADER =========
+st.title("Vspa Management Dashboard 💅")
+st.markdown("Manage and view key data for your spa — services, payments, and staff attendance.")
 
-# Example service data (includes staff name)
-data = {
-    "Client Name": ["Alice", "Brenda", "Cynthia", "Diana", "Eva"],
-    "Service": ["Massage", "Waxing", "Facial", "Massage", "Nails"],
-    "Staff": ["Mary", "Lydia", "Faith", "Joan", "Mary"],
-    "Amount (KES)": [2500, 1800, 2000, 2500, 1200],
-    "Payment Status": ["Paid", "Pending", "Paid", "Paid", "Pending"],
-    "Date": ["2025-11-01", "2025-11-02", "2025-11-03", "2025-11-04", "2025-11-05"]
-}
+# ========= NAVIGATION =========
+menu = st.sidebar.radio("Select a Section", ["Service Summary", "Staff Attendance"])
 
-df = pd.DataFrame(data)
+# ========= SERVICE SUMMARY =========
+if menu == "Service Summary":
+    st.header("Service Summary 💆‍♀️")
 
-# Apply filters
-if service_type != "All":
-    df = df[df["Service"] == service_type]
-if payment_status != "All":
-    df = df[df["Payment Status"] == payment_status]
-if staff_name != "All":
-    df = df[df["Staff"] == staff_name]
+    service_data = pd.DataFrame({
+        "Service": ["Facial", "Massage", "Waxing", "Manicure", "Pedicure"],
+        "Staff": ["Alice", "Grace", "Maria", "Jane", "Sarah"],
+        "Client": ["Lina", "Diana", "Faith", "Catherine", "Joy"],
+        "Payment (KES)": [2500, 4000, 3000, 1500, 2000]
+    })
 
-# Display data
-st.subheader("📋 Service Summary")
-st.dataframe(df)
+    st.dataframe(service_data)
 
-# Payment summary
-st.subheader("💰 Payment Overview")
-total_revenue = df[df["Payment Status"] == "Paid"]["Amount (KES)"].sum()
-pending_amount = df[df["Payment Status"] == "Pending"]["Amount (KES)"].sum()
+    st.subheader("Service Summary Chart")
+    fig, ax = plt.subplots()
+    ax.bar(service_data["Service"], service_data["Payment (KES)"])
+    ax.set_ylabel("Payments (KES)")
+    ax.set_title("Payments per Service")
+    st.pyplot(fig)
 
-col1, col2 = st.columns(2)
-col1.metric("Total Revenue (KES)", f"{total_revenue:,}")
-col2.metric("Pending Payments (KES)", f"{pending_amount:,}")
+    total_earnings = service_data["Payment (KES)"].sum()
+    st.metric(label="Total Earnings", value=f"KES {total_earnings}")
 
-# Staff performance summary (using Matplotlib)
-st.subheader("👩‍🔧 Staff Performance Overview")
-staff_summary = df.groupby("Staff")["Amount (KES)"].sum().reset_index()
+# ========= STAFF ATTENDANCE =========
+elif menu == "Staff Attendance":
+    st.header("Staff Attendance Tracker 👩‍💼")
 
-fig, ax = plt.subplots()
-ax.bar(staff_summary["Staff"], staff_summary["Amount (KES)"], color='lightcoral')
-ax.set_xlabel("Staff Member")
-ax.set_ylabel("Total Earnings (KES)")
-ax.set_title("Staff Performance Summary")
-st.pyplot(fig)
+    attendance_file = "staff_attendance.csv"
 
-st.markdown("---")
-st.caption("Prototype demo for Vspa Kenya — developed by Antony Karanja.")
+    if os.path.exists(attendance_file):
+        attendance_df = pd.read_csv(attendance_file)
+    else:
+        attendance_df = pd.DataFrame(columns=["Date", "Staff Name", "Status", "Clock In Time"])
+
+    st.subheader("Mark Attendance")
+
+    staff_name = st.text_input("Enter Staff Name")
+    status = st.selectbox("Select Status", ["Present", "Absent", "On Leave"], key="attendance_status")
+
+    if st.button("Clock In / Save Attendance"):
+        if staff_name:
+            current_time = datetime.now().strftime("%H:%M:%S")
+            new_entry = {
+                "Date": date.today(),
+                "Staff Name": staff_name,
+                "Status": status,
+                "Clock In Time": current_time
+            }
+            attendance_df = pd.concat([attendance_df, pd.DataFrame([new_entry])], ignore_index=True)
+            attendance_df.to_csv(attendance_file, index=False)
+            st.success(f"{staff_name} marked as {status} at {current_time}")
+        else:
+            st.warning("Please enter the staff name before saving.")
+
+    st.subheader("Today's Attendance Summary")
+    today_data = attendance_df[attendance_df["Date"] == str(date.today())]
+
+    if not today_data.empty:
+        st.dataframe(today_data)
+    else:
+        st.info("No attendance recorded yet for today.")
